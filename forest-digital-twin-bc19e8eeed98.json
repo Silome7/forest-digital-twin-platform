@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "forest-digital-twin",
+  "private_key_id": "bc19e8eeed9839e675daa5495ef1c802644a720c",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC0sFG1X9LwB1Hz\nSSBHa/Y+JIbQlUYj6mJxg5/ClRgl/7vAxUqvAexZC/6s83qjsFwzex7+qu5WjagI\nNGc/T6Mr/+hYiFMRFWBtStqKcceEoj7gEjHX3tVbU6SxKvbWyhQ+XOMp2vxOzoYy\nnlitKPxnNX3eYt9URFNIAIpWXGd5tOoaeaidswdZ4EaakDS3rEnbG18vreZAHzRb\nychInyVMN1tA+NaAHWkm9JpwD2vYjF+P7lKdSAfnt/4CFpXJeAFbJW0gRXqoW1FE\nXz3qhxhuaQA+KSXCJcVnX7wFh82A1i2OG0CXgGghp95qtqAv9aotJMsCvmKlwpzI\n+Cc2gbwlAgMBAAECggEAAcTQGbuMaNrl7yRsyLDe+x75wDbAi3ghBwWrgSU+t/CC\ngOcJ+FicsiNZ6/8P9WR7BiNTFFnNywuPgxia5bI1qLYpuTl6oyMQb0F1442CCA4i\n/TYbDXjS9zKSpCh3SpNuhDBvtGiFf1Y4c2wuS2HhVOI08skI/xbZePiGmwwLMQ0h\nrFztJWrWnKsGrNMJ6qgUppf24wR4tYCOBHybhdXehIshmYN8GlR7F/3G4lV0FO3M\n974BBJKlHLVNuGdTq2U71qCXn3Seqt/pSKO9YQzJrOR6w4lsvhoZt020SwO4tQ7c\nZmzFKk9f9yK5Yq00FDhq1rnzri7PQ8tmGwP5bv3qqQKBgQDicYoOObb5bxuBBjrx\nSYdKnoQZRfS25WvmKWQdLUmxbqJYNCHDLl4qxYKKXQ3nLAaQxTDsd8p1PinBQYiq\noYa+JXzAlFKPS7b6hxlEIqmvLm6j9LQVVj/hKqKm1Qijnf8+RhQ0s/8jLkDdEN3x\n9VokiEE9k4cAN33Km6gjTv0iwwKBgQDMReoftPMWLuzv2P3j9kJbuE+Q+3K1yyp/\nLB4xn/c6rxR3k15HLbCqSPqgCR3+cn0SAuz6tc7VsQQAe4DaurDs5a5Wg7GyA7zW\nkFnUwTyIxJJOcobGqCAiR8m/J80KihKP40VeuNCcWzrQuybxlaeDgL/VB1yU6Sva\n4QWHHC7m9wKBgQCGwLo/LOlOFmhvp5176R2xshM6Vv8BuBU1qnwBQOoRxJynkJ5m\n4Dj5iv/cBvQ3FWPy0uYCUmcQziVa8/y4Tdc5YGWU1K8sxwnknHDUsyv3K9J7jyt7\nZxAsloqkbTHu7B7wmBN+KX8zGFtRMrBhRHiYNN1eH2S/JEafQ3ITUPYisQKBgQC3\n9prj1SU6rCYL1wLHowad7X4SlrD20bJC92t1y5duTTCEg75bIeXBZZn4OF2/wkGq\nz+G147gTMKjm+lLQKWOe5TY9ibqlE8KkBToxZZlrnoQYjAGetNjDpp0lPuXkgPY4\niTf3F0AgH/T2+CUZWmqS/odEha22Gcu6Af7lb9c5fwKBgGVRrWQUHiL1XQ0GYvT8\nLmA4m96K8ELxL0hZBtpjGHPCwXozzO+H7r0RiDj0jQOIPQOH/KUdOeOyDXkm9Jti\nppQQmOFFvxrOVZN/0MEZRjvo1nDiEfjgkWs+ECv0u1GBGlX1NLO6S7wek7k8lHC1\n6CKQHCyhhi+rDE9wMxBKqZlG\n-----END PRIVATE KEY-----\n",
+  "client_email": "forest-digital-twin-sa-395@forest-digital-twin.iam.gserviceaccount.com",
+  "client_id": "106564589935022082980",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/forest-digital-twin-sa-395%40forest-digital-twin.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

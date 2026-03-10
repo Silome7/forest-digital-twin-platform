@@ -62,14 +62,15 @@ def create_app():
     from app.routes.dashboarduser import dashboarduser_bp
     from app.routes.sensors import sensors_bp
     from app.routes.alerts import alerts_bp
-
+    from app.routes.zones import zones_bp
+        
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(admin_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(dashboarduser_bp)
     app.register_blueprint(sensors_bp, url_prefix="/api/sensors")
     app.register_blueprint(alerts_bp, url_prefix="/api/alerts")
-
+    app.register_blueprint(zones_bp)
     # ----------------------------
     # Import Models
     # ----------------------------
@@ -100,28 +101,28 @@ def create_app():
         db.create_all()
 
         # Seed default users (si DB vide)
-        if User.query.count() == 0:
-            admin = User(
-                email="admin@forest.com", role="admin", telephone="+123456789"
-            )
-            admin.set_password("admin123")
+        #if User.query.count() == 0:
+        #    admin = User(
+        #        email="admin@forest.com", role="admin", telephone="+123456789"
+        #    )
+        #    admin.set_password("admin123")
 
-            agent = User(
-                email="agent@forest.com",
-                role="agent forestier",
-                telephone="+123456725",
-            )
-            agent.set_password("agent123")
+        #    agent = User(
+        #        email="agent@forest.com",
+        #       role="agent forestier",
+        #        telephone="+123456725",
+        #   )
+        #     agent.set_password("agent123")
 
-            chercheur = User(
-                email="chercheur@forest.com",
-                role="chercheur",
-                telephone="+123256789",
-            )
-            chercheur.set_password("chercheur123")
+        #    chercheur = User(
+        #        email="chercheur@forest.com",
+        #        role="chercheur",
+        #        telephone="+123256789",
+        #    )
+        #    chercheur.set_password("chercheur123")
 
-            db.session.add_all([admin, agent, chercheur])
-            db.session.commit()
+        #    db.session.add_all([admin, agent, chercheur])
+         #   db.session.commit()
 
         RoleService.initialize_default_roles()
         start_sensor_thread(app)

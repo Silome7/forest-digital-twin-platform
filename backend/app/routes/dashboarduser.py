@@ -1,8 +1,8 @@
 from flask import Blueprint, jsonify
 from app import db
-from app.models import Sensor, Measurement  # adapte selon tes modèles
+from app.models import Sensor # adapte selon tes modèles
 from sqlalchemy import func
-from app.models import Sensor, Alert , Measurement 
+from app.models import Sensor, Alert, SensorData 
 dashboarduser_bp = Blueprint('dashboarduser', __name__, url_prefix='/dashboarduser')
 
 @dashboarduser_bp.route('/environmental', methods=['GET'])
@@ -20,7 +20,7 @@ def get_user_environmental_data():
 def get_user_stats():
     # Exemple : stats simplifiées pour l’utilisateur
     total_sensors = Sensor.query.count()
-    data_points = db.session.query(func.count(Measurement.id)).scalar() or 0
+    data_points = db.session.query(func.count(SensorData.id)).scalar() or 0
 
     return jsonify({
         'totalSensors': total_sensors,

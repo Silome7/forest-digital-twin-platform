@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify
 from sqlalchemy import func
 from app import db
-from app.models import Sensor, Alert , Measurement 
+from app.models import Sensor, Alert, SensorData 
 
 dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/dashboard')
 
@@ -11,7 +11,7 @@ def get_dashboard_stats():
     total_sensors = Sensor.query.count()
     active_sensors = Sensor.query.filter_by(is_active=True).count()
     critical_alerts = Alert.query.filter_by(severity='critical').count()
-    data_points = db.session.query(func.count(Measurement.id)).scalar() or 0  
+    data_points = db.session.query(func.count(SensorData.id)).scalar() or 0  
 
     return jsonify({
         'totalSensors': total_sensors,

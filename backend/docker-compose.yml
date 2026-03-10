@@ -1,0 +1,65 @@
+version: '3.8'
+services:
+  # PostgreSQL avec PostGIS
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: forest_twin_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: DTDB
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - forest_twin_network
+ # MQTT Mosquitto
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    container_name: forest_twin_mqtt
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - mosquitto_config:/mosquitto/config
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_logs:/mosquitto/log
+    networks:
+      - forest_twin_network
+    command: mosquitto -c /mosquitto/config/mosquitto.conf
+# Flask Backend
+  backend:
+    build: .
+    container_name: forest_twin_backend
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/DTDB
+      FLASK_APP: app
+      FLASK_ENV: production
+      MQTT_BROKER: mosquitto
+      MQTT_PORT: 1883
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    networks:
+      - forest_twin_network
+    command: flask run --host=0.0.0.0
+
+volumes:
+  postgres_data:
+  mosquitto_config:
+  mosquitto_data:
+  mosquitto_logs:
+
+networks:
+  forest_twin_network:
+    driver: bridge
