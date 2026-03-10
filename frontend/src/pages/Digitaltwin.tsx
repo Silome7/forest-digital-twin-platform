@@ -3,99 +3,166 @@ import Forest2D from '../Digital twin/Forest2D';
 import Forest3D from '../Digital twin/Forest3D';
 import ErrorBoundary from '../components/Common/ErrorBoundary';
 
-
-interface Forest {
-  id: number;
-  name: string;
-  country: string;
+interface Zone { id: number; name: string; location: string; }
+interface Metrics {
+  health_score: number; status: string; risk_level: string;
+  temperature_avg: number; humidity_avg: number;
+  air_quality_index: number; sensor_coverage: number;
+  updated_at: string;
 }
 
-const forests: Forest[] = [
-  { id: 1, name: 'Forêt de la Mamora', country: 'Morocco' },
-  { id: 2, name: 'Amazon Sector', country: 'Brazil' },
-  { id: 3, name: 'Black Forest', country: 'Germany' },
-];
+const getRiskColor = (level: string) => {
+  switch (level?.toLowerCase()) {
+    case 'critical': return { bg: 'bg-red-100', text: 'text-red-700', badge: 'bg-red-600', dot: '🔴' };
+    case 'high':     return { bg: 'bg-orange-100', text: 'text-orange-700', badge: 'bg-orange-500', dot: '🟠' };
+    case 'medium':   return { bg: 'bg-yellow-100', text: 'text-yellow-700', badge: 'bg-yellow-500', dot: '🟡' };
+    default:         return { bg: 'bg-green-100', text: 'text-green-700', badge: 'bg-green-600', dot: '🟢' };
+  }
+};
 
 const DigitalTwin: React.FC = () => {
-  const [selectedForest, setSelectedForest] = useState<number>(1);
+  const [zones, setZones] = useState<Zone[]>([]);
+  const [selectedZone, setSelectedZone] = useState<number | null>(null);
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [zoneMetrics, setZoneMetrics] = useState<any[]>([]);
   const [view, setView] = useState<'2d' | '3d'>('2d');
-  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+  const headers = { Authorization: `Bearer ${token}` };
 
-  // Simulate forest data refresh
   useEffect(() => {
-    const generateData = () => ({
-      temperature: (20 + Math.random() * 10).toFixed(1),
-      humidity: (60 + Math.random() * 20).toFixed(1),
-      airQuality: (30 + Math.random() * 10).toFixed(0),
-    });
+    fetch('/api/zones', { headers })
+      .then(r => r.json())
+      .then(d => {
+        const list = d.data || [];
+        setZones(list);
+        if (list.length > 0) setSelectedZone(list[0].id);
+        setLoading(false);
+      });
+  }, []);
 
-    setData(generateData());
-    const interval = setInterval(() => setData(generateData()), 5000);
+  useEffect(() => {
+    if (!selectedZone) return;
+    fetch(`/api/zones/${selectedZone}/status`, { headers })
+      .then(r => r.json()).then(d => setMetrics(d.data || null));
+    fetch(`/api/zones/${selectedZone}/metrics?limit=30`, { headers })
+      .then(r => r.json()).then(d => setZoneMetrics(d.data || []));
+  }, [selectedZone]);
 
-    return () => clearInterval(interval);
-  }, [selectedForest]);
+  const risk = getRiskColor(metrics?.risk_level || 'normal');
+  const lastMetric = zoneMetrics[0];
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-900">Digital Twin</h1>
-      <p className="text-gray-600">
-        Visualisation 2D et 3D des forêts avec données environnementales simulées
-      </p>
+    <div className="flex h-screen bg-gray-950 text-white overflow-hidden" style={{ marginTop: '-24px' }}>
 
-      {/* Forest selector + view toggle */}
-      <div className="flex items-center space-x-4">
-        <select
-          value={selectedForest}
-          onChange={(e) => setSelectedForest(Number(e.target.value))}
-          className="border rounded px-4 py-2"
-        >
-          {forests.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.name} ({f.country})
-            </option>
+      {/* PANNEAU GAUCHE — Sélecteur + KPIs */}
+      <div className="w-80 bg-gray-900 border-r border-gray-800 flex flex-col overflow-y-auto">
+
+        {/* Header */}
+        <div className="p-4 border-b border-gray-800">
+          <h1 className="text-lg font-bold text-emerald-400">🌲 Forest Digital Twin</h1>
+          <p className="text-xs text-gray-400 mt-1">Monitoring en temps réel</p>
+        </div>
+
+        {/* Sélecteur de zone */}
+        <div className="p-4 border-b border-gray-800">
+          <label className="text-xs text-gray-400 uppercase tracking-wider mb-2 block">Zone forestière</label>
+          {loading ? <div className="text-gray-500 text-sm">Chargement...</div> : (
+            <select
+              value={selectedZone || ''}
+              onChange={e => setSelectedZone(Number(e.target.value))}
+              className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
+            >
+              {zones.map(z => (
+                <option key={z.id} value={z.id}>🌲 {z.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        {/* Badge statut */}
+        {metrics && (
+          <div className="p-4 border-b border-gray-800">
+            <div className={`flex items-center justify-between rounded-lg p-3 ${risk.bg}`}>
+              <div>
+                <div className={`text-xs font-bold uppercase ${risk.text}`}>Niveau de risque</div>
+                <div className={`text-lg font-bold ${risk.text}`}>{risk.dot} {metrics.risk_level || 'Normal'}</div>
+              </div>
+              <div className={`text-right ${risk.text}`}>
+                <div className="text-2xl font-bold">{metrics.health_score?.toFixed(0)}</div>
+                <div className="text-xs">Health Score</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* KPIs */}
+        <div className="p-4 space-y-3">
+          <div className="text-xs text-gray-400 uppercase tracking-wider mb-2">Données capteurs</div>
+
+          {[
+            { icon: '🌡️', label: 'Température', value: metrics?.temperature_avg?.toFixed(1) + ' °C', color: 'text-orange-400' },
+            { icon: '💧', label: 'Humidité', value: metrics?.humidity_avg?.toFixed(1) + ' %', color: 'text-blue-400' },
+            { icon: '🌿', label: 'NDVI', value: lastMetric?.avg_ndvi?.toFixed(3) || 'N/A', color: 'text-green-400' },
+            { icon: '🔥', label: 'Fire Risk Score', value: lastMetric?.fire_risk_score?.toFixed(1) || 'N/A', color: 'text-red-400' },
+            { icon: '📡', label: 'Couverture capteurs', value: metrics?.sensor_coverage ? metrics.sensor_coverage + ' %' : 'N/A', color: 'text-purple-400' },
+          ].map((kpi, i) => (
+            <div key={i} className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-2">
+              <span className="text-sm text-gray-300">{kpi.icon} {kpi.label}</span>
+              <span className={`text-sm font-bold ${kpi.color}`}>{kpi.value}</span>
+            </div>
           ))}
-        </select>
+        </div>
 
-        <button
-          onClick={() => setView('2d')}
-          className={`px-4 py-2 rounded ${view === '2d' ? 'bg-emerald-600 text-white' : 'bg-gray-200'}`}
-        >
-          2D
-        </button>
-        <button
-          onClick={() => setView('3d')}
-          className={`px-4 py-2 rounded ${view === '3d' ? 'bg-emerald-600 text-white' : 'bg-gray-200'}`}
-        >
-          3D
-        </button>
+        {/* Dernière mise à jour */}
+        {metrics?.updated_at && (
+          <div className="p-4 mt-auto border-t border-gray-800">
+            <p className="text-xs text-gray-500">
+              🕐 Mis à jour : {new Date(metrics.updated_at).toLocaleString('fr-FR')}
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Forest data */}
-      {data && (
-        <div className="bg-white p-4 rounded-lg border grid grid-cols-3 gap-4 text-center">
-          <div>
-            🌡️ <span className="font-bold">{data.temperature} °C</span>
+      {/* ZONE PRINCIPALE — Carte */}
+      <div className="flex-1 flex flex-col">
+
+        {/* Toolbar */}
+        <div className="flex items-center justify-between px-4 py-2 bg-gray-900 border-b border-gray-800">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-300">
+              {zones.find(z => z.id === selectedZone)?.name || '...'}
+            </span>
+            {metrics && (
+              <span className={`text-xs px-2 py-0.5 rounded-full text-white ${risk.badge}`}>
+                {metrics.status || 'Active'}
+              </span>
+            )}
           </div>
-          <div>
-            💧 <span className="font-bold">{data.humidity} %</span>
-          </div>
-          <div>
-            🌍 <span className="font-bold">AQI {data.airQuality}</span>
+          <div className="flex space-x-1">
+            <button
+              onClick={() => setView('2d')}
+              className={`px-4 py-1.5 rounded text-sm font-medium transition-all ${view === '2d' ? 'bg-emerald-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+            >
+              🗺️ 2D
+            </button>
+            <button
+              onClick={() => setView('3d')}
+              className={`px-4 py-1.5 rounded text-sm font-medium transition-all ${view === '3d' ? 'bg-emerald-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+            >
+              🌐 3D
+            </button>
           </div>
         </div>
-      )}
 
-      {/* Visualization */}
-      
-      <div className="h-[600px] w-full border rounded-lg">
-        <ErrorBoundary>
-    {view === '2d' ? (
-      <Forest2D forestId={selectedForest} />
-    ) : (
-      <Forest3D forestId={selectedForest} />
-    )}
-  </ErrorBoundary>
-</div>
+        {/* Visualisation */}
+        <div className="flex-1 relative">
+          <ErrorBoundary>
+            {view === '2d' && selectedZone && <Forest2D forestId={selectedZone} metrics={lastMetric} riskLevel={metrics?.risk_level || 'normal'} />}
+            {view === '3d' && selectedZone && <Forest3D forestId={selectedZone} metrics={lastMetric} riskLevel={metrics?.risk_level || 'normal'} />}
+          </ErrorBoundary>
+        </div>
+      </div>
     </div>
   );
 };

@@ -1,79 +1,171 @@
-import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, GeoJSON } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+import React, { useState, useEffect } from 'react';
+import { MapContainer, TileLayer, GeoJSON, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
-// Correction pour les icônes de marqueurs Leaflet avec Webpack/Vite
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-let DefaultIcon = L.icon({ iconUrl: icon, shadowUrl: iconShadow, iconSize: [25, 41], iconAnchor: [12, 41] });
-L.Marker.prototype.options.icon = DefaultIcon;
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
 
 interface Props {
   forestId: number;
+  metrics?: any;
+  riskLevel?: string;
 }
 
-const Forest2D: React.FC<Props> = ({ forestId }) => {
-  const [geoData, setGeoData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  // 1. Récupération des polygones PostGIS depuis ton API
+function MapUpdater({ geoData, zoneId }: { geoData: any; zoneId: number }) {
+  const map = useMap();
   useEffect(() => {
-    const fetchGeoData = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/api/zones/geojson', {
-            headers: {
-                // Si ton API est protégée par JWT, ajoute le token ici
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-        });
-        const data = await response.json();
-        setGeoData(data);
-      } catch (error) {
-        console.error("Erreur lors de la récupération du GeoJSON:", error);
-      } finally {
-        setLoading(false);
-      }
+    if (!geoData?.features?.length) return;
+    const selected = geoData.features.filter(
+      (f: any) => f.properties?.id === zoneId && f.geometry
+    );
+    if (selected.length > 0) {
+      const layer = L.geoJSON({ type: 'FeatureCollection' as const, features: selected } as any);
+      const bounds = layer.getBounds();
+      if (bounds.isValid()) map.fitBounds(bounds, { padding: [60, 60] });
+    }
+  }, [geoData, zoneId, map]);
+  return null;
+}
+
+const getRiskFillColor = (riskLevel: string) => {
+  switch (riskLevel?.toLowerCase()) {
+    case 'critical': return '#FF0000';
+    case 'high':     return '#FF6600';
+    case 'medium':   return '#FFD700';
+    default:         return '#27AE60';
+  }
+};
+
+const Forest2D: React.FC<Props> = ({ forestId, metrics, riskLevel = 'normal' }) => {
+  const [geoData, setGeoData] = useState<any>(null);
+  const [sensors, setSensors] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+
+  useEffect(() => {
+    setLoading(true);
+    const headers = { Authorization: `Bearer ${token}` };
+
+    fetch('/api/zones/geojson', { headers })
+      .then(res => res.json())
+      .then(data => { setGeoData(data); setLoading(false); })
+      .catch(() => { setError('Impossible de charger les zones'); setLoading(false); });
+
+    fetch(`/api/zones/${forestId}/sensors`, { headers })
+      .then(res => res.json())
+      .then(data => setSensors(data.data || []))
+      .catch(() => setSensors([]));
+
+  }, [forestId, token]);
+
+  const getZoneStyle = (feature: any) => {
+    const isSelected = feature?.properties?.id === forestId;
+    const fillColor = isSelected ? getRiskFillColor(riskLevel) : '#2ECC71';
+    return {
+      color: isSelected ? fillColor : '#27AE60',
+      weight: isSelected ? 3 : 1.5,
+      fillColor,
+      fillOpacity: isSelected ? 0.5 : 0.15,
     };
+  };
 
-    fetchGeoData();
-  }, [forestId]);
+  const onEachZone = (feature: any, layer: any) => {
+    if (!feature.properties) return;
+    const isSelected = feature.properties.id === forestId;
+    const temp = metrics?.avg_temperature?.toFixed(1) ?? 'N/A';
+    const humidity = metrics?.avg_humidity?.toFixed(1) ?? 'N/A';
+    const ndvi = metrics?.avg_ndvi?.toFixed(3) ?? 'N/A';
+    const fire = metrics?.fire_risk_score?.toFixed(1) ?? 'N/A';
 
-  // 2. Coordonnées par défaut (Centre du Rif/Maroc)
-  const centerPosition: [number, number] = [35.17, -5.27]; 
+    layer.bindPopup(`
+      <div style="font-family:sans-serif; min-width:180px; line-height:1.6">
+        <strong style="font-size:14px">${isSelected ? '📍' : '🌲'} ${feature.properties.name}</strong>
+        ${feature.properties.location ? `<br/>📌 ${feature.properties.location}` : ''}
+        ${isSelected ? `
+          <hr style="margin:6px 0; border-color:#eee"/>
+          <div>🌡️ Température : <b>${temp} °C</b></div>
+          <div>💧 Humidité : <b>${humidity} %</b></div>
+          <div>🌿 NDVI : <b>${ndvi}</b></div>
+          <div>🔥 Fire Risk : <b>${fire}</b></div>
+        ` : ''}
+      </div>
+    `);
+
+    layer.on('mouseover', () => layer.setStyle({ fillOpacity: isSelected ? 0.7 : 0.3 }));
+    layer.on('mouseout', () => layer.setStyle({ fillOpacity: isSelected ? 0.5 : 0.15 }));
+    if (isSelected) setTimeout(() => layer.openPopup(), 300);
+  };
+
+  if (loading) return (
+    <div className="h-full w-full flex items-center justify-center" style={{ background: '#0a1628' }}>
+      <div className="text-center text-white">
+        <div className="text-4xl mb-2 animate-pulse">🌲</div>
+        <p className="text-gray-400">Chargement de la carte satellite...</p>
+      </div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="h-full w-full flex items-center justify-center bg-red-950">
+      <p className="text-red-400">⚠️ {error}</p>
+    </div>
+  );
 
   return (
-    <div className="h-full w-full relative">
-      {loading && (
-        <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-white bg-opacity-50">
-          <span className="text-emerald-600 font-semibold">Chargement du socle géospatial...</span>
-        </div>
-      )}
-      
-      <MapContainer center={centerPosition} zoom={10} className="h-full w-full">
-        {/* 3. Fond de carte Satellite pour l'aspect Jumeau Numérique */}
-        <TileLayer
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-          attribution='&copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS'
-        />
+    <MapContainer
+      center={[35.2, -5.0]}
+      zoom={7}
+      className="h-full w-full"
+    >
+      {/* Fond satellite Esri */}
+      <TileLayer
+        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+        attribution="&copy; Esri"
+      />
+      {/* Labels CartoDB */}
+      <TileLayer
+        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png"
+        attribution="&copy; CartoDB"
+        opacity={0.8}
+      />
 
-        {/* 4. Affichage des zones (Polygones PostGIS) */}
-        {geoData && (
-          <GeoJSON 
-            data={geoData} 
-            style={{
-              color: '#34d399',      // Vert émeraude
-              weight: 2,
-              fillOpacity: 0.3,
-              fillColor: '#10b981'
-            }}
-            onEachFeature={(feature, layer) => {
-              layer.bindPopup(`<strong>Zone:</strong> ${feature.properties.name}`);
-            }}
+      {geoData && (
+        <>
+          <GeoJSON
+            key={`${forestId}-${riskLevel}`}
+            data={geoData}
+            style={getZoneStyle}
+            onEachFeature={onEachZone}
           />
-        )}
-      </MapContainer>
-    </div>
+          <MapUpdater geoData={geoData} zoneId={forestId} />
+        </>
+      )}
+
+      {/* Capteurs */}
+      {sensors.map((sensor: any) =>
+        sensor.latitude && sensor.longitude ? (
+          <Marker key={sensor.id} position={[sensor.latitude, sensor.longitude]}>
+            <Popup>
+              <div style={{ fontFamily: 'sans-serif', lineHeight: '1.6' }}>
+                <strong>📡 {sensor.name}</strong><br />
+                Type : {sensor.type}<br />
+                Statut :{' '}
+                <span style={{ color: sensor.status === 'active' ? '#16a34a' : '#ea580c', fontWeight: 'bold' }}>
+                  {sensor.status}
+                </span><br />
+                Batterie : {sensor.battery_level ?? 'N/A'}%
+              </div>
+            </Popup>
+          </Marker>
+        ) : null
+      )}
+    </MapContainer>
   );
 };
 
