@@ -181,3 +181,17 @@ def acknowledge_alert(zone_id, alert_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+# GET zones as GeoJSON (pour la carte)
+@zones_bp.route('/geojson', methods=['GET'])
+@jwt_required()
+def get_zones_geojson():
+    try:
+        zones = Zone.query.all()
+        features = [z.to_geojson_feature() for z in zones]
+        return jsonify({
+            "type": "FeatureCollection",
+            "features": features
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
