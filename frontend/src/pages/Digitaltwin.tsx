@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Forest2D from '../Digital twin/Forest2D';
 import Forest3D from '../Digital twin/Forest3D';
 import ErrorBoundary from '../components/Common/ErrorBoundary';
+import ZoneHistoryChart from '../components/Dashboard/ZoneHistoryChart';
 
 interface Zone { id: number; name: string; location: string; }
 interface Metrics {
@@ -25,7 +26,7 @@ const DigitalTwin: React.FC = () => {
   const [selectedZone, setSelectedZone] = useState<number | null>(null);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [zoneMetrics, setZoneMetrics] = useState<any[]>([]);
-  const [view, setView] = useState<'2d' | '3d'>('2d');
+  const [view, setView] = useState<'2d' | '3d' | 'chart'>('2d');
   const [loading, setLoading] = useState(true);
   const token = localStorage.getItem('access_token') || localStorage.getItem('token');
   const headers = { Authorization: `Bearer ${token}` };
@@ -55,16 +56,14 @@ const DigitalTwin: React.FC = () => {
   return (
     <div className="flex h-screen bg-gray-950 text-white overflow-hidden" style={{ marginTop: '-24px' }}>
 
-      {/* PANNEAU GAUCHE — Sélecteur + KPIs */}
+      {/* PANNEAU GAUCHE */}
       <div className="w-80 bg-gray-900 border-r border-gray-800 flex flex-col overflow-y-auto">
 
-        {/* Header */}
         <div className="p-4 border-b border-gray-800">
           <h1 className="text-lg font-bold text-emerald-400">🌲 Forest Digital Twin</h1>
           <p className="text-xs text-gray-400 mt-1">Monitoring en temps réel</p>
         </div>
 
-        {/* Sélecteur de zone */}
         <div className="p-4 border-b border-gray-800">
           <label className="text-xs text-gray-400 uppercase tracking-wider mb-2 block">Zone forestière</label>
           {loading ? <div className="text-gray-500 text-sm">Chargement...</div> : (
@@ -80,7 +79,6 @@ const DigitalTwin: React.FC = () => {
           )}
         </div>
 
-        {/* Badge statut */}
         {metrics && (
           <div className="p-4 border-b border-gray-800">
             <div className={`flex items-center justify-between rounded-lg p-3 ${risk.bg}`}>
@@ -96,16 +94,14 @@ const DigitalTwin: React.FC = () => {
           </div>
         )}
 
-        {/* KPIs */}
         <div className="p-4 space-y-3">
           <div className="text-xs text-gray-400 uppercase tracking-wider mb-2">Données capteurs</div>
-
           {[
-            { icon: '🌡️', label: 'Température', value: metrics?.temperature_avg?.toFixed(1) + ' °C', color: 'text-orange-400' },
-            { icon: '💧', label: 'Humidité', value: metrics?.humidity_avg?.toFixed(1) + ' %', color: 'text-blue-400' },
-            { icon: '🌿', label: 'NDVI', value: lastMetric?.avg_ndvi?.toFixed(3) || 'N/A', color: 'text-green-400' },
-            { icon: '🔥', label: 'Fire Risk Score', value: lastMetric?.fire_risk_score?.toFixed(1) || 'N/A', color: 'text-red-400' },
-            { icon: '📡', label: 'Couverture capteurs', value: metrics?.sensor_coverage ? metrics.sensor_coverage + ' %' : 'N/A', color: 'text-purple-400' },
+            { icon: '🌡️', label: 'Température',       value: metrics?.temperature_avg?.toFixed(1) + ' °C', color: 'text-orange-400' },
+            { icon: '💧', label: 'Humidité',           value: metrics?.humidity_avg?.toFixed(1) + ' %',     color: 'text-blue-400' },
+            { icon: '🌿', label: 'NDVI',               value: lastMetric?.avg_ndvi?.toFixed(3) || 'N/A',    color: 'text-green-400' },
+            { icon: '🔥', label: 'Fire Risk Score',    value: lastMetric?.fire_risk_score?.toFixed(1) || 'N/A', color: 'text-red-400' },
+            { icon: '📡', label: 'Couverture capteurs',value: metrics?.sensor_coverage ? metrics.sensor_coverage + ' %' : 'N/A', color: 'text-purple-400' },
           ].map((kpi, i) => (
             <div key={i} className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-2">
               <span className="text-sm text-gray-300">{kpi.icon} {kpi.label}</span>
@@ -114,7 +110,6 @@ const DigitalTwin: React.FC = () => {
           ))}
         </div>
 
-        {/* Dernière mise à jour */}
         {metrics?.updated_at && (
           <div className="p-4 mt-auto border-t border-gray-800">
             <p className="text-xs text-gray-500">
@@ -124,8 +119,8 @@ const DigitalTwin: React.FC = () => {
         )}
       </div>
 
-      {/* ZONE PRINCIPALE — Carte */}
-      <div className="flex-1 flex flex-col">
+      {/* ZONE PRINCIPALE */}
+      <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Toolbar */}
         <div className="flex items-center justify-between px-4 py-2 bg-gray-900 border-b border-gray-800">
@@ -152,14 +147,36 @@ const DigitalTwin: React.FC = () => {
             >
               🌐 3D
             </button>
+            <button
+              onClick={() => setView('chart')}
+              className={`px-4 py-1.5 rounded text-sm font-medium transition-all ${view === 'chart' ? 'bg-emerald-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+            >
+              📈 Historique
+            </button>
           </div>
         </div>
 
-        {/* Visualisation */}
-        <div className="flex-1 relative">
+        {/* Contenu principal */}
+        <div className="flex-1 overflow-y-auto">
           <ErrorBoundary>
-            {view === '2d' && selectedZone && <Forest2D forestId={selectedZone} metrics={lastMetric} riskLevel={metrics?.risk_level || 'normal'} />}
-            {view === '3d' && selectedZone && <Forest3D forestId={selectedZone} metrics={lastMetric} riskLevel={metrics?.risk_level || 'normal'} />}
+            {view === '2d' && selectedZone && (
+              <div className="h-full">
+                <Forest2D forestId={selectedZone} metrics={lastMetric} riskLevel={metrics?.risk_level || 'normal'} />
+              </div>
+            )}
+            {view === '3d' && selectedZone && (
+              <div className="h-full">
+                <Forest3D forestId={selectedZone} metrics={lastMetric} riskLevel={metrics?.risk_level || 'normal'} />
+              </div>
+            )}
+            {view === 'chart' && selectedZone && (
+              <div className="p-6">
+                <ZoneHistoryChart
+                  zoneId={selectedZone}
+                  zoneName={zones.find(z => z.id === selectedZone)?.name}
+                />
+              </div>
+            )}
           </ErrorBoundary>
         </div>
       </div>

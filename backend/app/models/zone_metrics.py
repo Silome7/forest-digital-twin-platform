@@ -21,8 +21,8 @@ class ZoneMetrics(db.Model):
     avg_air_quality = db.Column(db.Float)
     
     # Végétation (NDVI)
-    avg_ndvi = db.Column(db.Float)  # Normalized Difference Vegetation Index
-    ndvi_trend = db.Column(db.String(50))  # increasing/stable/decreasing
+    avg_ndvi = db.Column(db.Float)
+    ndvi_trend = db.Column(db.String(50))
     
     # Couverture capteurs
     active_sensors = db.Column(db.Integer)
@@ -30,7 +30,11 @@ class ZoneMetrics(db.Model):
     coverage_percent = db.Column(db.Float)
     
     # Qualité données
-    data_quality = db.Column(db.Float)  # 0-1
+    data_quality = db.Column(db.Float)
+
+    # Sprint 2 — scores IA
+    fire_risk_score = db.Column(db.Float)
+    health_index = db.Column(db.Float)
     
     # Relationships
     zone = db.relationship('Zone', backref='metrics')
@@ -48,7 +52,9 @@ class ZoneMetrics(db.Model):
             "active_sensors": self.active_sensors,
             "total_sensors": self.total_sensors,
             "coverage_percent": self.coverage_percent,
-            "data_quality": self.data_quality
+            "data_quality": self.data_quality,
+            "fire_risk_score": self.fire_risk_score,
+            "health_index": self.health_index,
         }
     
     def __repr__(self):
