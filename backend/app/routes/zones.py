@@ -6,6 +6,7 @@ from app.models.zone_status import ZoneStatus
 from app.models.zone_metrics import ZoneMetrics
 from app.models.zone_alert import ZoneAlert
 from app.models.prediction import Prediction
+from app.services.alert_service import calculate_fire_risk, analyze_and_alert
 
 zones_bp = Blueprint('zones', __name__, url_prefix='/api/zones')
 
@@ -258,6 +259,17 @@ def get_zone_history(zone_id):
             'data_points': len(data),
             'data': data
         }), 200
+        
 
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+    
+@zones_bp.route('/<int:zone_id>/analyze', methods=['POST'])
+@jwt_required()
+def analyze_zone_risk(zone_id):
+    try:
+        result = analyze_and_alert(zone_id)
+        return jsonify({"status": "success", "data": result}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500

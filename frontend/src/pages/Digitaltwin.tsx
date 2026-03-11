@@ -3,6 +3,7 @@ import Forest2D from '../Digital twin/Forest2D';
 import Forest3D from '../Digital twin/Forest3D';
 import ErrorBoundary from '../components/Common/ErrorBoundary';
 import ZoneHistoryChart from '../components/Dashboard/ZoneHistoryChart';
+import AlertsPanel from '../components/Dashboard/AlertsPanel';
 
 interface Zone { id: number; name: string; location: string; }
 interface Metrics {
@@ -26,6 +27,7 @@ const DigitalTwin: React.FC = () => {
   const [selectedZone, setSelectedZone] = useState<number | null>(null);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [zoneMetrics, setZoneMetrics] = useState<any[]>([]);
+  const [activeAlert, setActiveAlert] = useState<any>(null);
   const [view, setView] = useState<'2d' | '3d' | 'chart'>('2d');
   const [loading, setLoading] = useState(true);
   const token = localStorage.getItem('access_token') || localStorage.getItem('token');
@@ -47,11 +49,27 @@ const DigitalTwin: React.FC = () => {
     fetch(`/api/zones/${selectedZone}/status`, { headers })
       .then(r => r.json()).then(d => setMetrics(d.data || null));
     fetch(`/api/zones/${selectedZone}/metrics?limit=30`, { headers })
-      .then(r => r.json()).then(d => setZoneMetrics(d.data || []));
+      .then(r => r.json()).then(d => {
+        setZoneMetrics(d.data || []);
+        fetch(`/api/zones/${selectedZone}/alerts`, { headers })
+          .then(r => r.json())
+          .then(d => {
+            const critical = (d.data || []).find(
+              (a: any) => (a.severity === 'Critical' || a.severity === 'High') && !a.acknowledged
+            );
+            setActiveAlert(critical || null);
+          });
+      });
+
+    fetch(`/api/zones/${selectedZone}/analyze`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' }
+    });
   }, [selectedZone]);
 
   const risk = getRiskColor(metrics?.risk_level || 'normal');
   const lastMetric = zoneMetrics[0];
+  
 
   return (
     <div className="flex h-screen bg-gray-950 text-white overflow-hidden" style={{ marginTop: '-24px' }}>
@@ -94,6 +112,22 @@ const DigitalTwin: React.FC = () => {
           </div>
         )}
 
+        {activeAlert && (
+          <div className="p-4 border-b border-gray-800">
+            <div className="rounded-lg border border-red-600 bg-red-950/40 p-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="text-xs font-bold uppercase text-red-200">Alerte critique</div>
+                  <div className="mt-1 text-sm text-red-100">
+                    {activeAlert.message || activeAlert.title || activeAlert.description || 'Un événement critique est en cours.'}
+                  </div>
+                </div>
+                <span className="text-xs font-semibold text-red-300">{activeAlert.severity}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="p-4 space-y-3">
           <div className="text-xs text-gray-400 uppercase tracking-wider mb-2">Données capteurs</div>
           {[
@@ -109,6 +143,10 @@ const DigitalTwin: React.FC = () => {
             </div>
           ))}
         </div>
+        {/* Alertes récentes */}
+        <AlertsPanel zoneId={selectedZone || 5} />
+
+       
 
         {metrics?.updated_at && (
           <div className="p-4 mt-auto border-t border-gray-800">
@@ -155,6 +193,22 @@ const DigitalTwin: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {activeAlert && (
+          <div className="flex items-center gap-3 px-4 py-3 bg-red-950 border-b border-red-800 animate-pulse">
+            <span className="text-2xl">⚠️</span>
+            <div className="flex-1">
+              <p className="text-red-400 font-bold text-sm">{activeAlert.title}</p>
+              <p className="text-red-300 text-xs">{activeAlert.description}</p>
+            </div>
+            <button
+              onClick={() => setActiveAlert(null)}
+              className="text-red-400 hover:text-white text-xs px-2 py-1 rounded border border-red-700"
+            >
+              Ignorer
+            </button>
+          </div>
+        )}
 
         {/* Contenu principal */}
         <div className="flex-1 overflow-y-auto">
